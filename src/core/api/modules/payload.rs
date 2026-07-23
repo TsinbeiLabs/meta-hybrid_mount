@@ -7,7 +7,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 
 use super::{ModuleListEntry, runtime_index::RuntimeModuleIndex, scan_info::module_scan_info};
 use crate::{
@@ -46,20 +46,23 @@ pub(super) fn build_scanned_modules_payload(
             )
         })?;
         if !file_type.is_dir() {
-            bail!(
-                "module directory contains a non-directory entry: {}",
-                entry.path().display()
-            );
+            continue;
         }
 
         let module_path = entry.path();
-        let id = entry
-            .file_name()
-            .into_string()
-            .map_err(|_| anyhow::anyhow!("module directory name is not valid UTF-8"))?;
-        if inventory::is_reserved_module_dir(&id) {
+        let file_name = entry.file_name();
+        if file_name
+            .to_str()
+            .is_some_and(inventory::is_reserved_module_dir)
+        {
             continue;
         }
+        if !inventory::discovery::has_regular_module_prop(&module_path)? {
+            continue;
+        }
+        let id = file_name
+            .into_string()
+            .map_err(|_| anyhow::anyhow!("module directory name is not valid UTF-8"))?;
         crate::utils::validation::validate_module_id(&id)?;
         inventory::discovery::validate_module_prop_id(&module_path.join("module.prop"), &id)?;
 

@@ -87,6 +87,23 @@ fn scanned_modules_payload_includes_module_prop_metadata() {
 }
 
 #[test]
+fn scanned_modules_payload_skips_non_module_entries() {
+    let temp = tempfile::tempdir().unwrap();
+    fs::create_dir_all(temp.path().join("TA_utl")).unwrap();
+    fs::write(temp.path().join("manager.lock"), b"").unwrap();
+
+    let config = Config {
+        moduledir: temp.path().to_path_buf(),
+        ..Default::default()
+    };
+    let state = RuntimeState::default();
+
+    let modules = build_scanned_modules_payload(&config, &state, temp.path()).unwrap();
+
+    assert!(modules.is_empty());
+}
+
+#[test]
 fn apply_modules_payload_rules_only_preserves_disable_marker() {
     let temp = tempfile::tempdir().unwrap();
     let config_path = temp.path().join("config.toml");
